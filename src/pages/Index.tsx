@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import UrlInput from "@/components/UrlInput";
@@ -19,7 +20,6 @@ const Index: React.FC = () => {
   const [loading, setLoading] = React.useState<boolean>(false);
   const [progress, setProgress] = React.useState<number>(0);
   const [showProgress, setShowProgress] = React.useState<boolean>(false);
-  const [downloadType, setDownloadType] = React.useState<"single" | "playlist">("single");
 
   const handleDownload = async () => {
     if (!url.trim()) {
@@ -31,28 +31,20 @@ const Index: React.FC = () => {
       toast.error("Please select a quality option");
       return;
     }
-
-    // Validate URL based on download type
-    if (downloadType === "playlist" && !url.includes("playlist?list=")) {
-      setUrlError("Please enter a valid YouTube playlist URL");
-      return;
-    } else if (downloadType === "single" && !url.includes("watch?v=")) {
-      setUrlError("Please enter a valid YouTube video URL");
-      return;
-    }
     
     setLoading(true);
     setProgress(0);
     setShowProgress(true);
     
     try {
+      // Simulating progress for URL download
       const progressInterval = simulateProgress();
       
+      // Using POST instead of GET for URL downloads
       const formData = new FormData();
       formData.append('url', url);
       formData.append('format', format);
       formData.append('quality', quality);
-      formData.append('type', downloadType);
       
       const response = await fetch(API_BASE_URL, {
         method: 'POST',
@@ -66,15 +58,16 @@ const Index: React.FC = () => {
         throw new Error(`Error: ${response.status}`);
       }
       
+      // Get filename from Content-Disposition header or create a default one
       const contentDisposition = response.headers.get('Content-Disposition');
       const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
       const matches = filenameRegex.exec(contentDisposition || '');
-      const filename = matches && matches[1] ? matches[1].replace(/['"]/g, '') : 
-        downloadType === "playlist" ? `youtube_playlist.zip` : `youtube_${format}.${format}`;
+      const filename = matches && matches[1] ? matches[1].replace(/['"]/g, '') : `youtube_${format}.${format}`;
       
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       
+      // Create a link element and trigger download
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = filename;
@@ -82,7 +75,7 @@ const Index: React.FC = () => {
       link.click();
       link.remove();
       
-      toast.success(downloadType === "playlist" ? "Playlist download successful!" : "Download successful!");
+      toast.success("Download successful!");
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Failed to download. Please try again later.");
@@ -90,7 +83,7 @@ const Index: React.FC = () => {
       setTimeout(() => {
         setLoading(false);
         setShowProgress(false);
-      }, 1000);
+      }, 1000); // Keep progress visible briefly after completion
     }
   };
 
@@ -129,18 +122,11 @@ const Index: React.FC = () => {
             Video Vault
           </CardTitle>
           <CardDescription>
-            Download YouTube videos and playlists in MP4 or MP3 format
+            Download YouTube videos in MP4 or MP3 format
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <UrlInput 
-            url={url} 
-            setUrl={setUrl} 
-            error={urlError} 
-            setError={setUrlError}
-            downloadType={downloadType}
-            setDownloadType={setDownloadType}
-          />
+          <UrlInput url={url} setUrl={setUrl} error={urlError} setError={setUrlError} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormatSelector format={format} setFormat={setFormat} />
@@ -150,7 +136,7 @@ const Index: React.FC = () => {
           {showProgress && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-gray-500">
-                <span>{downloadType === "playlist" ? "Downloading playlist..." : "Downloading..."}</span>
+                <span>Downloading...</span>
                 <span>{Math.round(progress)}%</span>
               </div>
               <Progress value={progress} className="h-2" />
@@ -187,3 +173,4 @@ const Index: React.FC = () => {
 };
 
 export default Index;
+
